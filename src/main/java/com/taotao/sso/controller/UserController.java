@@ -1,0 +1,111 @@
+package com.taotao.sso.controller;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.converter.json.MappingJacksonValue;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.taotao.common.pojo.TaotaoResult;
+import com.taotao.common.utils.ExceptionUtil;
+import com.taotao.pojo.TbUser;
+import com.taotao.sso.service.UserService;
+
+@Controller
+public class UserController {
+
+	@Autowired
+	private UserService userService;
+
+	@RequestMapping(value = "/user/check/{param}/{type}", method = RequestMethod.GET)
+	@ResponseBody
+	public Object checkData(@PathVariable String param, @PathVariable Integer type, String callback) {
+		try {
+			boolean flag = userService.checkData(param, type);
+			TaotaoResult result = TaotaoResult.ok(flag);
+			if (!StringUtils.isBlank(callback)) {
+				// 请求为jsonp调用，需要支持
+				MappingJacksonValue mappingJacksonValue = new MappingJacksonValue(result);
+				mappingJacksonValue.setJsonpFunction(callback);
+				return mappingJacksonValue;
+			}
+			return result;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return TaotaoResult.build(500, ExceptionUtil.getStackTrace(e));
+		}
+
+	}
+
+	@RequestMapping(value = "/user/register", method = RequestMethod.POST)
+	@ResponseBody
+	public TaotaoResult register(TbUser user) {
+		try {
+			TaotaoResult result = userService.register(user);
+			return result;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return TaotaoResult.build(500, ExceptionUtil.getStackTrace(e));
+		}
+	}
+
+	@RequestMapping(value = "/user/login", method = RequestMethod.POST)
+	@ResponseBody
+	public TaotaoResult login(String username, String password, HttpServletRequest request,
+			HttpServletResponse response) {
+		try {
+			TaotaoResult result = userService.login(username, password, request, response);
+			return result;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return TaotaoResult.build(500, ExceptionUtil.getStackTrace(e));
+		}
+	}
+
+	@RequestMapping("/user/token/{token}")
+	@ResponseBody
+	public Object getUserByToken(@PathVariable String token, String callback) {
+		try {
+			TaotaoResult result = userService.getUserByToken(token);
+			if (StringUtils.isNotBlank(callback)) {
+				MappingJacksonValue mappingJacksonValue = new MappingJacksonValue(result);
+				mappingJacksonValue.setJsonpFunction(callback);
+				return mappingJacksonValue;
+			}
+			return result;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return TaotaoResult.build(400, ExceptionUtil.getStackTrace(e));
+		}
+	}
+	
+//	清空session，删除redis中的token对应的信息
+	@RequestMapping("/user/logout/{token}")
+	@ResponseBody
+	public Object deleteTokenInfo(@PathVariable String token,String callback){
+		try {
+			TaotaoResult result=userService.deleteToken(token);
+			if(!StringUtils.isBlank(callback)){
+				MappingJacksonValue mappingJacksonValue = new MappingJacksonValue(result);
+				mappingJacksonValue.setJsonpFunction(callback);
+				return mappingJacksonValue;
+			}
+			return result;
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return TaotaoResult.build(400, ExceptionUtil.getStackTrace(e));
+		}
+		
+	}
+}
